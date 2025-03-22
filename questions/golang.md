@@ -7,7 +7,7 @@
 切片可以动态扩容，类型和长度无关，它的数据结构包括三个部分：1.指向底层数组的指针`array` 2.长度`len` 3.容量`cap` ，共3*8=24字节，初始化时使用`make`创建，而数组只能使用`new`创建。
 
 
-#### 1.切片的结构和扩容规则，操作后底层数组的变化
+#### 2.切片的结构和扩容规则，操作后底层数组的变化
 
 向切片中添加元素时，如果长度没有超过容量，则底层数组不会改变只是长度增加；如果超过容量发生扩容，会重新分配一块内存，然后把原数组的内容复制过来，再将新的元素添加。
 
@@ -15,7 +15,7 @@
 
 1.18版本后为了让切片扩容更加平滑，优化了扩容规则 1.双倍扩容：切片当前容量小于256时，容量直接翻倍 2.渐进式扩容：切片当前长度大于256时，新容量公式为`newcap += (newcap + 3*threshold) /4`，等价于扩容`1/4+192`。
 
-#### 2.map的结构和扩容原理
+#### 3.map的结构和扩容原理
 
 ```Go
 type hmap struct {
@@ -53,7 +53,7 @@ map的本质是哈希表，底层为一个`hmap`结构体，hmap中使用桶`bma
 
 当一个key经过hash指向的桶已经存满了，就会在该`bmap`的后面链一个溢出桶(overflow)来解决此问题。
 
-<img src="https://cdn.nlark.com/yuque/0/2025/png/22528385/1740239156808-6c716d86-c6eb-462e-aaae-41ead4f10f72.png?x-oss-process=image%2Fformat%2Cwebp" alt="image.png" style="zoom: 33%;" />
+![map.png](../image/map.png)
 
 扩容方式
 
@@ -80,9 +80,13 @@ loadFactor没超过6.5，但溢出桶数量过多时会触发等量扩容
 - B不大于15时，溢出桶数量大于常规桶等量扩容
 - B大于15时，溢出桶数量大于2^15等量扩容
 
-原因是很多溢出桶中的键值对被删除，等量扩容经过重新排列后内存更加紧凑
+等量扩容的触发原因是很多溢出桶中的键值对被删除，经过重新排列后内存更加紧凑
 
-#### 3.make和new的区别
+#### 4.map是并发安全的吗
+
+Go中的map不是并发安全的，如果同时对map进行一边遍历一遍删除的操作可能会引发`panic`，如果要保证线程安全，可以使用读写锁或者安全的`sync.Map`
+
+#### 5.make和new的区别
 
 在 Go 语言中，`make` 和 `new` 都是用于内存分配的关键字，但它们有着显著区别：
 
@@ -106,15 +110,58 @@ loadFactor没超过6.5，但溢出桶数量过多时会触发等量扩容
 
 #### 4.channel的结构和特性 
 
+channel是Go语言中的一种核心数据结构，主要用于Goroutine间的通信和同步。channel分为有缓冲和无缓冲两种，有缓冲channel在缓冲区非空时可以异步操作，无缓冲channel的操作会同步或阻塞，使用`make`关键字来创建。
 
+底层数据结构是`hchan`，主要包括`buf`、`sendq`、`recvq`、`sendx`、`recvx`等主要字段标识环形缓冲区。
+
+```Go
+type hchan struct {
+	// chan 里元素数量
+	qcount   uint
+	// chan 底层循环数组的长度
+	dataqsiz uint
+	// 指向底层环形缓冲区的指针 只针对有缓冲的 channel
+	buf      unsafe.Pointer
+	// chan 中元素大小
+	elemsize uint16
+	// chan 是否被关闭的标志
+	closed   uint32
+	// chan 中元素类型
+	elemtype *_type // element type
+	// 已发送元素在循环数组中的索引
+	sendx    uint   // send index
+	// 已接收元素在循环数组中的索引
+	recvx    uint   // receive index
+	// 等待接收的 goroutine 队列
+	recvq    waitq  // list of recv waiters
+	// 等待发送的 goroutine 队列
+	sendq    waitq  // list of send waiters
+	// 保护 hchan 中所有字段
+	lock mutex
+}
+```
+
+其中`waitq`是一个双向链表，`lock`用来保证每个操作都是原子的
+
+channel的常见用法包括Goroutine的数据传递、阻塞协程、结合select实现多路复用
 
 #### 5.各种情况下对channel进行读写会有什么结果
 
+对各种情况下的channel操作的结果如下
 
+| 操作 | nil的channel | 已关闭的channel | 正常的channel |
+| ---- | ------------ | --------------- | ------------- |
+| 读取 | 阻塞         | 读到零值        | 成功或阻塞    |
+| 写入 | 阻塞         | panic           | 成功或阻塞    |
+| 关闭 | panic        | panic           | 成功          |
 
 #### 6.值传递和引用传递的区别
 
+Go语言中只有值传递，但通过指针、切片、映射、通道等类型可实现类似引用传递的效果。
 
+值传递时，函数接收的是实参值的副本，对副本的修改不会影响原变量。
+
+引用传递时对变量的修改会影响底层数据，因为它们虽然在函数间传递的是变量副本，但指针都指向同一块数据区域。
 
 #### 7.怎么实现一个任务只被执行一次
 
