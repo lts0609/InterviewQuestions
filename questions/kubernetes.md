@@ -10,7 +10,7 @@
 
 `kube-scheduler`负责为Pod选出最优节点，通过在插件化的framework中注册各种plugin，并在对应的阶段执行插件对目标节点做筛选，调度的过程中包括调度周期和异步的绑定周期。
 
-`cloud-controller- manager`使负责与云服务提供商进行交互的组件，它使得Kubernetes集群能够更好地与云环境集成，充分利用云平台提供的各种资源和服务。
+`cloud-controller-manager`使负责与云服务提供商进行交互的组件，它使得Kubernetes集群能够更好地与云环境集成，充分利用云平台提供的各种资源和服务。
 
 #### 2.如果从零开始部署集群
 
