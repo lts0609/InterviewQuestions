@@ -85,7 +85,7 @@
 
 #### 19.Flannel网络插件的实现原理
 
-Flannel是一种轻量级的Kubernetes网络插件，实现简单易于维护，常用于中小型集群中，网络模式包括`VXLAN`和`VXLAN`。
+Flannel是一种轻量级的Kubernetes网络插件，实现简单易于维护，常用于中小型集群中，网络模式包括`VXLAN`和`Host-GW`。
 
 **VXLAN**模式
 
